@@ -1,0 +1,15 @@
+{
+  "name": "meatless-crawler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Jonas Jensen <jonas.jensen@msn.com> (https://jonas-jensen.com/)",
+  "license": "ISC",
+  "dependencies": {
+    "crawler": "^1.1.4"
+  }
+}
