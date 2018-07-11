@@ -1,7 +1,11 @@
 const Crawler = require('crawler');
-const { writeFileSync } = require('jsonfile');
+const { writeFile } = require('jsonfile');
+const { promisify } = require('util');
 const URL = require('url');
 
+const write = promisify(writeFile);
+
+let shouldWrite = true;
 const pages = [
   'https://en.wikipedia.org/wiki/Animal_consciousness#Cambridge_Declaration_on_Consciousness',
   'https://www.theguardian.com/news/2018/may/07/true-cost-of-eating-meat-environment-health-animal-welfare',
@@ -38,6 +42,8 @@ const whitelistInclude = [
   'meat',
 ];
 
+const visitedDictionary = {};
+
 function isIncludedInList(token, list) {
   return list.some(listWord => token.includes(listWord));
 }
@@ -49,6 +55,12 @@ const c = new Crawler({
       console.log(err);
     } else {
       const cheerio = res.$;
+      if (!shouldWrite || !cheerio) {
+        console.log('weird', res);
+        done();
+        return;
+      }
+
       const links = cheerio("a");
       cheerio(links).each((i, link) => {
         let href = cheerio(link).attr('href');
@@ -61,8 +73,15 @@ const c = new Crawler({
         ) {
           const hrefUrl = href.startsWith('/') ? URL.resolve(res.request.uri.href, href) : href;
 
-          console.log(cheerio(link).text() + ': ' + hrefUrl);
+          console.log(hrefUrl);
           visitedPages.push(hrefUrl);
+
+          if (visitedDictionary[res.request.uri.hostname]) {
+            visitedDictionary[res.request.uri.hostname].push(hrefUrl)
+          } else {
+            visitedDictionary[res.request.uri.hostname] = [hrefUrl];
+          }
+
           c.queue(hrefUrl);
         }
       })
@@ -74,8 +93,9 @@ const c = new Crawler({
 
 c.queue('https://www.theguardian.com/commentisfree/2016/aug/09/vegan-corrupt-food-system-meat-dairy');
 
-process.on('SIGINT', () =>{
-  writeFileSync('./paths.json', visitedPages);
+process.on('SIGINT', async () => {
+  shouldWrite = false;
+  await Promise.all(Object.keys(visitedDictionary).map(site => write(`./urls/${site}.json`, visitedDictionary[site])));
   process.exit();
 });
 
