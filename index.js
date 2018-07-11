@@ -56,7 +56,6 @@ const c = new Crawler({
     } else {
       const cheerio = res.$;
       if (!shouldWrite || !cheerio) {
-        console.log('weird', res);
         done();
         return;
       }
@@ -68,21 +67,24 @@ const c = new Crawler({
         if (
           href &&
           (isIncludedInList(href, whitelistInclude) || isIncludedInList(cheerio(link).text(), whitelistInclude)) &&
-          !isIncludedInList(href, blacklistWords) &&
-          !visitedPages.includes(href)
+          !isIncludedInList(href, blacklistWords)
         ) {
           const hrefUrl = href.startsWith('/') ? URL.resolve(res.request.uri.href, href) : href;
+          if (!visitedPages.includes(hrefUrl)) {
+            if (visitedPages.length % 100 === 0) {
+              console.log(visitedPages.length + ' entries ..');
+            }
 
-          console.log(hrefUrl);
-          visitedPages.push(hrefUrl);
+            visitedPages.push(hrefUrl);
 
-          if (visitedDictionary[res.request.uri.hostname]) {
-            visitedDictionary[res.request.uri.hostname].push(hrefUrl)
-          } else {
-            visitedDictionary[res.request.uri.hostname] = [hrefUrl];
+            if (visitedDictionary[res.request.uri.hostname]) {
+              visitedDictionary[res.request.uri.hostname].push(hrefUrl)
+            } else {
+              visitedDictionary[res.request.uri.hostname] = [hrefUrl];
+            }
+
+            c.queue(hrefUrl);
           }
-
-          c.queue(hrefUrl);
         }
       })
     }
