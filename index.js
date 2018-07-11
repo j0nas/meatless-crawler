@@ -1,4 +1,6 @@
 const Crawler = require('crawler');
+const { writeFileSync } = require('jsonfile');
+const URL = require('url');
 
 const pages = [
   'https://en.wikipedia.org/wiki/Animal_consciousness#Cambridge_Declaration_on_Consciousness',
@@ -15,6 +17,31 @@ const pages = [
   'https://www.theguardian.com/commentisfree/2015/dec/22/festive-christmas-meal-long-haul-flight-meats-damaging-planet',
 ];
 
+const visitedPages = [
+  'https://www.theguardian.com/commentisfree/2016/aug/09/vegan-corrupt-food-system-meat-dairy',
+];
+
+const blacklistWords = [
+  'twitter',
+  'facebook',
+  'google',
+  'linkedin',
+  'mailto:',
+  'whatsapp',
+  'pinterest',
+  'fb-messenger'
+];
+
+const whitelistInclude = [
+  'vegan',
+  'vegetarian',
+  'meat',
+];
+
+function isIncludedInList(token, list) {
+  return list.some(listWord => token.includes(listWord));
+}
+
 const c = new Crawler({
   maxConnections: 100,
   callback: (err, res, done) => {
@@ -25,8 +52,19 @@ const c = new Crawler({
       const links = cheerio("a");
       cheerio(links).each((i, link) => {
         let href = cheerio(link).attr('href');
-        console.log(cheerio(link).text() + ': ' + href);
-        c.queue(href)
+
+        if (
+          href &&
+          (isIncludedInList(href, whitelistInclude) || isIncludedInList(cheerio(link).text(), whitelistInclude)) &&
+          !isIncludedInList(href, blacklistWords) &&
+          !visitedPages.includes(href)
+        ) {
+          const hrefUrl = href.startsWith('/') ? URL.resolve(res.request.uri.href, href) : href;
+
+          console.log(cheerio(link).text() + ': ' + hrefUrl);
+          visitedPages.push(hrefUrl);
+          c.queue(hrefUrl);
+        }
       })
     }
 
@@ -35,3 +73,9 @@ const c = new Crawler({
 });
 
 c.queue('https://www.theguardian.com/commentisfree/2016/aug/09/vegan-corrupt-food-system-meat-dairy');
+
+process.on('SIGINT', () =>{
+  writeFileSync('./paths.json', visitedPages);
+  process.exit();
+});
+
