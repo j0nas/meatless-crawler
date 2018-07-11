@@ -76,10 +76,11 @@ const c = new Crawler({
 
             visitedPages.push(hrefUrl);
 
+            const site = { text: cheerio(link).text(), url: hrefUrl };
             if (visitedDictionary[res.request.uri.hostname]) {
-              visitedDictionary[res.request.uri.hostname].push(hrefUrl);
+              visitedDictionary[res.request.uri.hostname].push(site);
             } else {
-              visitedDictionary[res.request.uri.hostname] = [hrefUrl];
+              visitedDictionary[res.request.uri.hostname] = [site];
             }
 
             c.queue(hrefUrl);
